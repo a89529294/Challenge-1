@@ -5,61 +5,62 @@ import useInterval from "./useInterval.js";
 import "./App.css";
 import settingsIcon from "./assets/images/gear.svg";
 
-const initialDuration = 900;
+const initialDuration = 901;
 const formatTime = (time) => {
-  if (time === 0) return "00";
+  if (time === 0 || "") return "00";
   else if (time < 10) return "0" + time;
   else return time;
 };
 const getMin = (duration) => Math.floor(duration / 60);
 const getSec = (duration) => duration % 60;
+const isFocused = (ele) => document.activeElement === ele;
 
 function App() {
-  //single source of truth
   const [duration, setDuration] = useState(initialDuration);
   //'standby','editing','running'
-  const [mode, setMode] = useState("idle");
+  const [running, setRunning] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editMin, setEditMin] = useState(getMin(duration));
+  const [editSec, setEditSec] = useState(getSec(duration));
   const minInputRef = useRef();
+  const secInputRef = useRef();
 
-  const [min, setMin] = useState(Math.floor(initialDuration / 60));
-  const [sec, setSec] = useState(initialDuration % 60);
+  const min = getMin(duration);
+  const sec = getSec(duration);
 
   useInterval(
     () => {
       setDuration(duration - 1);
     },
-    mode === "running" ? 1000 : null
+    running ? 1000 : null
   );
 
   useEffect(() => {
-    setMin(formatTime(getMin(duration)));
-    setSec(formatTime(getSec(duration)));
-  }, [duration]);
-
-  const changeDuration = () => {
-    setDuration(min * 60 + sec);
-    setMin(formatTime(getMin(duration)));
-    setSec(formatTime(getSec(duration)));
-    console.log(getMin(duration));
-    console.log(min * 60);
-    console.log(formatTime(getMin(duration)));
-    setMode("standby");
-  };
+    setEditMin(formatTime(min));
+    setEditSec(formatTime(sec));
+  }, [editing, min, sec]);
 
   const changeMin = (e) => {
     const value = e.target.value;
-    if (value === "") setMin("");
+    console.log(value);
+    if (value === "") setEditMin("");
     else {
-      !Number.isNaN(parseInt(value)) && setMin(parseInt(value));
+      !Number.isNaN(value) && setEditMin(parseInt(value));
     }
   };
 
   const changeSec = (e) => {
     const value = e.target.value;
-    if (value === "") setSec("");
-    else {
-      !Number.isNaN(parseInt(value)) && setSec(parseInt(value));
-    }
+    if (value === "") setEditSec("");
+    else !Number.isNaN(value) && setEditSec(parseInt(value));
+  };
+
+  const userModifyDuration = () => {
+    setEditing(false);
+    const min = editMin === "" ? 0 : parseInt(editMin);
+    const sec = editSec === "" ? 0 : parseInt(editSec);
+    console.log(min, sec);
+    setDuration(min * 60 + sec);
   };
 
   return (
@@ -72,44 +73,55 @@ function App() {
 
       <div className="timer">
         <div className="time">
-          <div
-            className="minutes"
-            onClick={() => {
-              setMode("editing");
-              setTimeout(() => {
-                minInputRef.current.focus();
-              }, 0);
-            }}
-          >
-            <input
-              type="text"
-              value={min}
-              disabled={mode !== "editing"}
-              onChange={changeMin}
-              onBlur={changeDuration}
-              maxLength={2}
-              ref={minInputRef}
-            />
+          <div className="minutes">
+            {editing ? (
+              <input
+                type="text"
+                maxLength={2}
+                value={editMin}
+                onChange={changeMin}
+                onBlur={userModifyDuration}
+                ref={minInputRef}
+              />
+            ) : (
+              <input
+                type="text"
+                value={formatTime(min)}
+                disabled={running}
+                onChange={changeMin}
+                maxLength={2}
+                onClick={() => setEditing(true)}
+              />
+            )}
           </div>
           <div className="colon">:</div>
-          <div className="seconds" onClick={() => setMode("editing")}>
-            <input
-              type="text"
-              value={sec}
-              disabled={mode !== "editing"}
-              onChange={changeSec}
-              onBlur={changeDuration}
-              maxLength={2}
-            />
+          <div className="seconds">
+            {editing ? (
+              <input
+                type="text"
+                maxLength={2}
+                value={editSec}
+                onChange={changeSec}
+                onBlur={userModifyDuration}
+                ref={secInputRef}
+              />
+            ) : (
+              <input
+                type="text"
+                value={formatTime(sec)}
+                disabled={running}
+                onChange={changeSec}
+                maxLength={2}
+                onClick={() => setEditing(true)}
+              />
+            )}
           </div>
         </div>
         <button
           className="start"
-          onClick={() =>
-            setMode((mode) => (mode === "running" ? "standby" : "running"))
-          }
+          onClick={() => setRunning((running) => !running)}
         >
-          {mode === "running" ? "pause" : "start"}
+          {running ? "pause" : "start"}
         </button>
         <button className="settings">
           <img src={settingsIcon} alt="Settings" />
