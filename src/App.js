@@ -5,7 +5,7 @@ import useInterval from "./useInterval.js";
 import "./App.css";
 import settingsIcon from "./assets/images/gear.svg";
 
-const initialDuration = 901;
+const initialDuration = 900;
 const formatTime = (time) => {
   if (time === 0 || "") return "00";
   else if (time < 10) return "0" + time;
@@ -13,53 +13,51 @@ const formatTime = (time) => {
 };
 const getMin = (duration) => Math.floor(duration / 60);
 const getSec = (duration) => duration % 60;
-const isFocused = (ele) => document.activeElement === ele;
+const isNum = (val) => /^\d+$/.test(val);
 
 function App() {
   const [duration, setDuration] = useState(initialDuration);
   //'standby','editing','running'
   const [running, setRunning] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editMin, setEditMin] = useState(getMin(duration));
-  const [editSec, setEditSec] = useState(getSec(duration));
-  const minInputRef = useRef();
-  const secInputRef = useRef();
+  const [editMin, setEditMin] = useState();
+  const [editSec, setEditSec] = useState();
 
-  const min = getMin(duration);
-  const sec = getSec(duration);
+  const min = formatTime(getMin(duration));
+  const sec = formatTime(getSec(duration));
 
   useInterval(
     () => {
-      setDuration(duration - 1);
+      if (duration === 0) {
+        setRunning(false);
+        alert("Time's up!");
+      } else setDuration(duration - 1);
     },
     running ? 1000 : null
   );
 
-  useEffect(() => {
-    setEditMin(formatTime(min));
-    setEditSec(formatTime(sec));
-  }, [editing, min, sec]);
+  const enterEditMode = () => {
+    setEditing(true);
+    setEditMin(min);
+    setEditSec(sec);
+  };
 
   const changeMin = (e) => {
     const value = e.target.value;
-    console.log(value);
     if (value === "") setEditMin("");
-    else {
-      !Number.isNaN(value) && setEditMin(parseInt(value));
-    }
+    else isNum(value) && setEditMin(value);
   };
 
   const changeSec = (e) => {
     const value = e.target.value;
     if (value === "") setEditSec("");
-    else !Number.isNaN(value) && setEditSec(parseInt(value));
+    else isNum(value) && setEditSec(value);
   };
 
   const userModifyDuration = () => {
     setEditing(false);
     const min = editMin === "" ? 0 : parseInt(editMin);
     const sec = editSec === "" ? 0 : parseInt(editSec);
-    console.log(min, sec);
     setDuration(min * 60 + sec);
   };
 
@@ -81,16 +79,15 @@ function App() {
                 value={editMin}
                 onChange={changeMin}
                 onBlur={userModifyDuration}
-                ref={minInputRef}
               />
             ) : (
               <input
                 type="text"
-                value={formatTime(min)}
+                value={min}
                 disabled={running}
                 onChange={changeMin}
                 maxLength={2}
-                onClick={() => setEditing(true)}
+                onClick={enterEditMode}
               />
             )}
           </div>
@@ -103,16 +100,15 @@ function App() {
                 value={editSec}
                 onChange={changeSec}
                 onBlur={userModifyDuration}
-                ref={secInputRef}
               />
             ) : (
               <input
                 type="text"
-                value={formatTime(sec)}
+                value={sec}
                 disabled={running}
                 onChange={changeSec}
                 maxLength={2}
-                onClick={() => setEditing(true)}
+                onClick={enterEditMode}
               />
             )}
           </div>
